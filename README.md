@@ -8,9 +8,9 @@ Problem description
 --
 Given two parameters \lambda and \mu and n binary variables x_i the objective function to be minimized is
 
-E(x) = \sum\_i (a\_i+b\_i\lambda + c\_i\mu)*x\_i + \sum\_(i,j\in N) x\_i*(1-x\_j)*d\_ij
+E(x) = \sum\_i (a\_i+b\_i\lambda + c\_i\mu)*x\_i + \sum\_( {i,j} \in N) x\_i(1-x\_j)d\_ij
 
-where a,b,c,d are problem specific parameters restricted to be integers. 
+where a,b,c,d are problem specific parameters restricted to be integers and N some neighborhood.
 For fixed \mu and \lambda the optimal solution can be found efficiently via max-flow/min-cut.
 
 Code
@@ -43,9 +43,9 @@ _D. Fernández-Baca and S.Srinivasan_.
 
 
 2. __CGAL: the computational geometry algorithms library__. <br />
-Proceedings of the 17th ACM SIGSPATIAL international conference on advances in geographic information systems. ACM, 2009. <br />
-_Fabri, Andreas, and Sylvain Pion_.
+17th ACM SIGSPATIAL international conference on advances in geographic information systems, 2009. <br />
+_A. Fabri and P. Sylvain_.
 
 3. __An experimental comparison of min-cut/max-flow algorithms for energy minimization in vision__. <br />
-Pattern Analysis and Machine Intelligence (PAMI) 2004. <br />
-_Boykov, Yuri, and Vladimir Kolmogorov_.
+Pattern Analysis and Machine Intelligence (PAMI), 2004. <br />
+_Y. Boykov and V. Kolmogorov_.
