@@ -1,4 +1,4 @@
-This is a MatLab/C++ code for finding the solution diagram of the two-parametric max-flow problem [1].
+MATLAB/C++ code for finding the solution diagram of the two-parametric max-flow problem [1].
 
 ![Solution diagram](screenshot/diagram.png)
 
