@@ -1,7 +1,7 @@
 //
 // CPPMATRIX
 //
-// C++ wrapper for Matlab matrices 
+// C++ wrapper for Matlab matrices
 //
 // Petter Strandmark 2010
 //
@@ -12,84 +12,192 @@
 
 #include <sstream>
 #include <algorithm>
+#include <stdexcept>
+
+#include "mex.h"
 #include "mexutils.h"
+#include <sstream>
+
+
+// Extremely annoying macros need to be undefined in
+// order to make std::min and std::max work.
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
+
+//
+// typeToID<T>() returns the correct Matlab identifier
+// for the type T. It throws an exception for unknown
+// types.
+//
+namespace {
+	template<typename T>
+	mxClassID typeToID()
+	{
+		mexErrMsgTxt("Unknown type!");
+		return mxUINT8_CLASS;
+	}
+
+	template<>
+	mxClassID typeToID<double>()
+	{
+		return mxDOUBLE_CLASS;
+	}
+	template<>
+	mxClassID typeToID<float>()
+	{
+		return mxSINGLE_CLASS;
+	}
+	template<>
+	mxClassID typeToID<unsigned char>()
+	{
+		return mxUINT8_CLASS;
+	}
+	template<>
+	mxClassID typeToID<signed char>()
+	{
+		return mxINT8_CLASS;
+	}
+	template<>
+	mxClassID typeToID<unsigned int>()
+	{
+		ASSERT(sizeof(unsigned int)==4);
+		return mxUINT32_CLASS;
+	}
+	template<>
+	mxClassID typeToID<signed int>()
+	{
+		ASSERT(sizeof(signed int)==4);
+		return mxINT32_CLASS;
+	}
+	template<>
+	mxClassID typeToID<unsigned short>()
+	{
+		ASSERT(sizeof(unsigned short)==2);
+		return mxUINT16_CLASS;
+	}
+	template<>
+	mxClassID typeToID<signed short>()
+	{
+		ASSERT(sizeof(signed short)==2);
+		return mxINT16_CLASS;
+	}
+	template<>
+	mxClassID typeToID<unsigned long long>()
+	{
+		ASSERT(sizeof(unsigned long long)==8);
+		return mxUINT64_CLASS;
+	}
+	template<>
+	mxClassID typeToID<signed long long>()
+	{
+		ASSERT(sizeof(signed long long)==8);
+		return mxINT64_CLASS;
+	}
+	template<>
+	mxClassID typeToID<bool>()
+	{
+		return mxLOGICAL_CLASS;
+	}
+}
+
 
 template<typename T>
 class matrix
 {
 public:
-    
+
 	T* data;
     mxArray* array;
-	mwSize M,N,O;
-	
+	mwSize M,N,O,P;
+
 	matrix(const mxArray* array)
-	{       
+	{
 		this->array = (mxArray*)array; //Hack to allow const mxArrays
-		ASSERT(!mxIsSparse(array));	
-		ASSERT(mxGetClassID(array) == typeToID());
+		ASSERT(!mxIsSparse(array));
+		ASSERT(mxGetClassID(array) == typeToID<T>());
 
 		int ndim = mxGetNumberOfDimensions(array);
-		ASSERT(ndim<=3);
+		ASSERT(ndim<=4);
+
 		if (ndim <= 2) {
 			M = mxGetM(array);
-			N = mxGetN(array);	
+			N = mxGetN(array);
 			O = 1;
+			P = 1;
+		}
+		else if (ndim==3) {
+			const mwSize* dims = mxGetDimensions(array);
+			M = dims[0];
+			N = dims[1];
+			O = dims[2];
+			P = 1;
 		}
 		else {
 			const mwSize* dims = mxGetDimensions(array);
 			M = dims[0];
 			N = dims[1];
 			O = dims[2];
+			P = dims[3];
 		}
 		data = (T*)mxGetPr(array);
-		
+
 		shouldDestroy = false;
 	}
 
-	matrix(int M, int N=1, int O=1)
+	matrix(mwSize M, mwSize N=1, mwSize O=1, mwSize P=1)
 	{
 		this->M = M;
 		this->N = N;
 		this->O = O;
-		if (O==1) {
+		this->P = P;
+		if (O==1 && P==1) {
 			mwSize size[] = {M,N};
-			this->array = mxCreateNumericArray(2,size,typeToID(),mxREAL);
+			this->array = mxCreateNumericArray(2,size,typeToID<T>(),mxREAL);
+		}
+		else if (P==1) {
+			mwSize size[] = {M,N,O};
+			this->array = mxCreateNumericArray(3,size,typeToID<T>(),mxREAL);
 		}
 		else {
-			mwSize size[] = {M,N,O};
-			this->array = mxCreateNumericArray(3,size,typeToID(),mxREAL);
+			mwSize size[] = {M,N,O,P};
+			this->array = mxCreateNumericArray(4,size,typeToID<T>(),mxREAL);
 		}
 		data = (T*)mxGetPr(array);
-		
+
 		shouldDestroy = true;
 	}
-	
-	matrix(const matrix& org) 
+
+	matrix(const matrix& org)
 	{
 		*this = org;
 	}
-	
+
 	matrix()
 	{
-		M = N = O = 0;
+		M = N = O = P = 0;
 		data = 0;
 		array = 0;
+		shouldDestroy = false;
 	}
-	
+
 	~matrix()
 	{
 		if (shouldDestroy) {
 			mxDestroyArray(array);
 		}
 	}
-	
-	mwSize numel() 
+
+	mwSize numel() const
 	{
-		return M*N*O;
+		return M*N*O*P;
 	}
-	
-	void operator=(const matrix& org) 
+
+	void operator=(const matrix& org)
 	{
 		if (org.shouldDestroy) {
 			throw std::runtime_error("matrix() : Cannot copy a managed matrix");
@@ -98,44 +206,77 @@ public:
 		M = org.M;
 		N = org.N;
 		O = org.O;
+		P = org.P;
 		data = org.data;
 		array = org.array;
 	}
-	
+
 	T& operator[](mwSize i)
 	{
+		ASSERT(i>=0 && i<numel());
 		return data[i];
 	}
 	T& operator()(mwSize i)
 	{
-		return data[i];
+		return operator[](i);
 	}
 	T& operator()(mwSize i, mwSize j)
 	{
-		return data[i + M*j];
+		return operator[](i + M*j);
 	}
 	T& operator()(mwSize i, mwSize j, mwSize k)
 	{
-		return data[i + M*j + M*N*k];
+		return operator[](i + M*j + M*N*k);
 	}
-	
+	T& operator()(mwSize i, mwSize j, mwSize k, mwSize l)
+	{
+		return operator[](i + M*j + M*N*k + M*N*O*l);
+	}
+
+	T operator[](mwSize i) const
+	{
+		ASSERT(i>=0 && i<numel());
+		return data[i];
+	}
+	T operator()(mwSize i) const
+	{
+		return operator[](i);
+	}
+	T operator()(mwSize i, mwSize j) const
+	{
+		return operator[](i + M*j);
+	}
+	T operator()(mwSize i, mwSize j, mwSize k) const
+	{
+		return operator[](i + M*j + M*N*k);
+	}
+	T operator()(mwSize i, mwSize j, mwSize k, mwSize l) const
+	{
+		return operator[](i + M*j + M*N*k + M*N*O*l);
+	}
+
 	operator mxArray*()
 	{
 		shouldDestroy = false;
 		return array;
 	}
-    
-    T min() 
-    {
-        return *std::min_element(data, data+numel());
-    }
-    
-    T max()
-    {
-        return *std::max_element(data, data+numel());
-    }
-	
-    void set_value(mwSize i, T value)
+
+	int ndim() const
+	{
+		return  mxGetNumberOfDimensions(array);
+	}
+
+	T min() const
+	{
+		return *std::min_element(data, data+numel());
+	}
+
+	T max() const
+	{
+		return *std::max_element(data, data+numel());
+	}
+
+	void set_value(mwSize i, T value)
     {
 			data[i] = value;
     }
@@ -156,90 +297,9 @@ public:
     }
 
 private:
-	
+
 	bool shouldDestroy;
-	
-	mxClassID typeToID()
-	{
-		mexErrMsgTxt("Unknown type!");
-		return mxUINT8_CLASS;
-	}
+
 };
-
-
-#ifdef WIN32
-	template<>
-	mxClassID matrix<double>::typeToID()
-	{
-		return mxDOUBLE_CLASS;
-	}
-	template<>
-	mxClassID matrix<float>::typeToID()
-	{
-		return mxSINGLE_CLASS;
-	}
-	template<>
-	mxClassID matrix<unsigned char>::typeToID()
-	{
-		return mxUINT8_CLASS;
-	}
-	template<>
-	mxClassID matrix<signed char>::typeToID()
-	{
-		return mxINT8_CLASS;
-	}
-	template<>
-	mxClassID matrix<unsigned int>::typeToID()
-	{
-		ASSERT(sizeof(unsigned int)==4);
-		return mxUINT32_CLASS;
-	}
-	template<>
-	mxClassID matrix<signed int>::typeToID()
-	{
-		ASSERT(sizeof(signed int)==4);
-		return mxINT32_CLASS;
-	}
-	template<>
-	mxClassID matrix<unsigned short>::typeToID()
-	{
-		ASSERT(sizeof(unsigned short)==4);
-		return mxUINT16_CLASS;
-	}
-	template<>
-	mxClassID matrix<signed short>::typeToID()
-	{
-		ASSERT(sizeof(signed short)==4);
-		return mxINT16_CLASS;
-	}
-    template<>
-	mxClassID matrix<int64_t>::typeToID()
-	{
-		ASSERT(sizeof(signed short)==4);
-		return mxINT64_CLASS;
-	}
-#else
-	template<>
-	mxClassID matrix<double>::typeToID();
-	template<>
-	mxClassID matrix<float>::typeToID();
-	template<>
-	mxClassID matrix<unsigned char>::typeToID();
-	template<>
-	mxClassID matrix<signed char>::typeToID();
-	template<>
-	mxClassID matrix<unsigned int>::typeToID();
-	template<>
-	mxClassID matrix<signed int>::typeToID();
-	template<>
-	mxClassID matrix<unsigned short>::typeToID();
-	template<>
-	mxClassID matrix<signed short>::typeToID();
-    template<>
-    mxClassID matrix<int64_t>::typeToID();
-#endif
-
-
-
 
 #endif

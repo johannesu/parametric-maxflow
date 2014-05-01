@@ -69,7 +69,7 @@ typedef Nef_polyhedron::Halffacet_const_iterator Halffacet_const_iterator;
 
 typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
 
-typedef typename Polyhedron::Halfedge_handle Halfedge_handle;
+typedef Polyhedron::Halfedge_handle Halfedge_handle;
 
 // Datatypes used in CGAL, field and ring.
 typedef Kernel::FT  FT;

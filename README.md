@@ -30,6 +30,24 @@ The code uses Computational Geometry Algorithms Library (CGAL),
 install instruction can be found at 
 [http://doc.cgal.org/latest/Manual/installation.html](http://doc.cgal.org/latest/Manual/installation.html).
 
+### Linux ###
+For Debian based distributions there is a CGAL package: libcgal-dev.
+
+### Windows ###
+Follow the instructions and go into Parametric.m and change
+
+* boost_root = 'C:\dev\boost_1_55_0'
+* cgal_root = 'C:\dev\CGAL-4.4'
+
+You also have to change the name of the libraries, they are named after the compiler you are using.
+Current names are for Visual Studio 2013 (version 12).
+
+
+#### Precompiled mex files ####
+Check the release tab for precompiled mex files for Windows and Linux.
+
+* Windows require Visual studio 2013 runtime libraries.
+
 Usage
 ----------
 See examples/example.m

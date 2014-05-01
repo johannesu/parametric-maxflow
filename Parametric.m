@@ -3,7 +3,6 @@
 %   E(x) = \sum_i (a_i+b_i\lambda + c_i\mu)x_i + \sum_(i,j\in N) x_i(1-x_j)*d_ij
 %
 % Note: the code only accept integer weights.
-% //Johannes Ulén
 
 classdef Parametric < handle
 	properties
@@ -192,14 +191,54 @@ classdef Parametric < handle
 		%																 solutions is optimal [x y z];
 		%			solutions(k).solution:		 The opitmal solutions.
 		%			solutions(k).tanget_plane: The plane equation for this solutions given on affine form.
-		function solutions = find_all_solutions(self, name)
+		function solutions = find_all_solutions(self)
 			
 			% compile
 			cpp_file = 'parametric_mex.cpp';
 			out_name = 'parametric_mex';
-			extra_arguments{1} = ['-lut -lmpfr -lCGAL -lgmp -lboost_thread  -frounding-math'];
-			extra_arguments{2} = ['-I/usr/include'];
 			
+			extra_arguments = {};
+
+			
+			if ispc()
+				% Set these paths (observe build paths and visual studio verion).
+				% Note that the CGAL dll must be found by MATLAB. This can be done in two ways
+				% 1) Append envoirment variable path to point to <cgal-build-folder>\bin 
+				% 2) Copy it to the same folder as the mex file 
+				boost_root = 'C:\dev\boost_1_55_0';
+				cgal_root = 'C:\dev\CGAL-4.4';
+				
+				% Paths
+				extra_arguments{end+1} = ['-I""' boost_root '""'];
+				
+
+				extra_arguments{end+1} = ['-I""' cgal_root '\include""'];
+				extra_arguments{end+1} = ['-I""' cgal_root '\build\include""'];
+				extra_arguments{end+1} = ['-I""' cgal_root '\auxiliary\gmp\include""'];
+				
+				extra_arguments{end+1} = ['-L""' boost_root '\lib64-msvc-12.0""'];
+				extra_arguments{end+1} = ['-L""' cgal_root '\build\lib""'];
+				extra_arguments{end+1} = ['-L""' cgal_root '\auxiliary\gmp\lib'];			
+				extra_arguments{end+1} = ['-L""' cgal_root '\auxiliary\gmp\bin'];
+				
+				% Libaries (update here too)
+				extra_arguments{end+1} = '-lCGAL-vc120-mt-4.4';
+				extra_arguments{end+1} = '-llibboost_thread-vc120-mt-1_55';
+				extra_arguments{end+1} = '-llibboost_system-vc120-mt-1_55';
+				extra_arguments{end+1} = '-llibgmp-10';
+				extra_arguments{end+1} = '-llibmpfr-4';
+				
+			else
+				extra_arguments{end+1} = '-lCGAL';
+				extra_arguments{end+1} = '-lboost_thread';
+				extra_arguments{end+1} = '-lut';
+				extra_arguments{end+1} = '-lmpfr';
+				extra_arguments{end+1} = '-lgmp';
+				
+				extra_arguments{end+1} = '-I/usr/include';
+				extra_arguments{end+1} = '-frounding-math';
+			end	
+
 			sources = {['maxflow-v3.02.src' filesep 'graph.cpp'], ...
 				['utils' filesep 'cppmatrix.cpp'], ...
 				['maxflow-v3.02.src' filesep 'graph.cpp'], ...
