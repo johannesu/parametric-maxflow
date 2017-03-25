@@ -14,7 +14,7 @@ where `a`,`b`,`c`, and `d` are problem specific parameters restricted to be inte
 
 For any fixed values of λ and μ the optimal solution can be found efficiently via max-flow/min-cut.
 
-The solution diagram gives the solution `x` minimizing `f` for any choice of λ and μ.
+The solution diagram gives the solution `x` minimizing `f` for *any* choice of λ and μ.
 
 A more detailed descriptions is given in [4].
 
@@ -53,7 +53,7 @@ Check the release tab for precompiled mex files for Windows and Linux.
 
 Usage
 ----------
-See examples/example.m
+See [examples/example.m](examples/example.m).
 
 References
 ----------
